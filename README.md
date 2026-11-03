@@ -119,7 +119,8 @@ The synthetic test doesn't model lens distortion, autofocus breathing, motion bl
 
 - Moving inference to a worker took the UI from **~17–22 fps to 60 fps** at 4× throttle, with zero long tasks.
 - Caveats: headless Chromium has no real GPU (the GPU delegate is software-emulated and slower than CPU here), and CDP throttling doesn't slow worker threads. The **main-thread 4× inference time (~45–75 ms) is the better proxy** for a mid-range Android phone. Expect ~13–20 fps detection there, with the UI unaffected.
-- Payload: app JS **33 kB** (13 kB gzip) + CSS 12 kB. The face model (3.7 MB) and the MediaPipe wasm (~10 MB) are fetched once and cached for 7 days. First visit on 4G is ~2–4 s.
+- Payload: app JS **33 kB** (13 kB gzip) + CSS 12 kB. Measured on the live site, the one-time downloads are the MediaPipe wasm (14.5 MB raw, **3.9 MB** compressed) and the face model (**3.3 MB** transferred), both cached for 7 days. A cold start on the live site (download + model warm-up, headless test machine in Lagos → Vercel fra1) took ~24 s. On a fast connection with a real GPU expect ~3–8 s, and repeat visits skip the download.
+- Live check: the full flow (calibrate → guide → E check → results) passes on the production URL with the strict CSP active (worker + wasm load fine): 22.5 fps detection, 60 fps UI, 0 long tasks at 4× throttle.
 
 ## Privacy approach
 
