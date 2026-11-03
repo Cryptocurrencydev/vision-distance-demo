@@ -1,4 +1,5 @@
 import './styles.css';
+import { inject } from '@vercel/analytics';
 import { openFrontCamera, CameraError, type CameraHandle } from './core/camera';
 import { Tracker, type TrackerFrame } from './core/tracker';
 import {
@@ -7,6 +8,9 @@ import {
 } from './core/distance';
 import { loadCalibration, saveCalibration, clearCalibration, type Calibration } from './core/storage';
 import { drawE, EStaircase, LEVELS, type Dir } from './core/optotype';
+
+// Initialize Vercel Web Analytics
+inject();
 
 // ───────────────────────────── setup ─────────────────────────────
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
