@@ -18,6 +18,7 @@ import {
 } from './distance';
 import { WorkerEngine, MATRIX_OFFSET, PTS, type Engine } from './engine';
 import type { Delegate } from './paths';
+import type { ModelAssets } from './preload';
 
 export type { Delegate } from './paths';
 
@@ -64,6 +65,7 @@ export class Tracker {
   targetFps: number;
   latest: TrackerFrame | null = null;
   private engine: Engine | null = null;
+  private assets: ModelAssets | null = null;
   private running = false;
   private wasRunning = false;
   private busy = false;
@@ -100,17 +102,18 @@ export class Tracker {
   }
 
   /** prefer: GPU/CPU delegate; mode: 'auto' tries the worker first, then the main thread. */
-  async init(prefer: Delegate = 'GPU', mode: 'auto' | 'main' = 'auto'): Promise<Delegate> {
+  async init(assets: ModelAssets, prefer: Delegate = 'GPU', mode: 'auto' | 'main' = 'auto'): Promise<Delegate> {
+    this.assets = assets;
     if (mode === 'auto') {
       try {
-        this.engine = await WorkerEngine.create(prefer);
+        this.engine = await WorkerEngine.create(prefer, assets);
         return this.engine.delegate;
       } catch (e) {
         console.warn('[iriscale] worker inference unavailable, using main thread', e);
       }
     }
     const { MainThreadEngine } = await import('./engine-main');
-    this.engine = await MainThreadEngine.create(prefer);
+    this.engine = await MainThreadEngine.create(prefer, assets);
     return this.engine.delegate;
   }
 
@@ -213,7 +216,7 @@ export class Tracker {
         this.stop();
         engine.close();
         this.engine = null;
-        void this.init('CPU', engine.kind === 'worker' ? 'auto' : 'main').then(() => this.start());
+        if (this.assets) void this.init(this.assets, 'CPU', engine.kind === 'worker' ? 'auto' : 'main').then(() => this.start());
       }
       return;
     }

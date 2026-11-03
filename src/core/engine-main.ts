@@ -1,6 +1,7 @@
 /** Main-thread fallback engine — lazy-loaded so MediaPipe's JS isn't in the main bundle. */
 import type { FaceLandmarker } from '@mediapipe/tasks-vision';
 import { createLandmarker, type Delegate } from './tracker-shared';
+import type { ModelAssets } from './preload';
 import { MATRIX_OFFSET, OUT_LEN, PTS, type Engine, type EngineResult } from './engine';
 
 export class MainThreadEngine implements Engine {
@@ -8,11 +9,11 @@ export class MainThreadEngine implements Engine {
   private out = new Float32Array(OUT_LEN);
   private constructor(private lm: FaceLandmarker, readonly delegate: Delegate) {}
 
-  static async create(prefer: Delegate): Promise<MainThreadEngine> {
-    const { landmarker, delegate } = await createLandmarker('VIDEO', prefer);
+  static async create(prefer: Delegate, assets?: ModelAssets): Promise<MainThreadEngine> {
+    const { landmarker, delegate } = await createLandmarker('VIDEO', prefer, 2, assets);
     try { // warm-up pass on a blank frame (shader compile / graph JIT)
       const blank = document.createElement('canvas');
-      blank.width = 640; blank.height = 480;
+      blank.width = 1280; blank.height = 720;
       landmarker.detectForVideo(blank, 1);
     } catch { /* best-effort */ }
     return new MainThreadEngine(landmarker, delegate);

@@ -8,6 +8,7 @@ import {
 } from './core/distance';
 import { loadCalibration, saveCalibration, clearCalibration, type Calibration } from './core/storage';
 import { drawE, EStaircase, LEVELS, type Dir } from './core/optotype';
+import { preloadModel } from './core/preload';
 
 // Initialize Vercel Web Analytics
 inject();
@@ -71,6 +72,7 @@ function show(next: Screen): void {
   window.scrollTo(0, 0);
   h?.setAttribute('tabindex', '-1');
   h?.focus({ preventScroll: true });
+  renderModelStatus();
   if (next === 'calibrate') renderCalStatus();
   if (next === 'guide') enterGuide();
   if (next === 'check') enterCheck();
@@ -83,32 +85,66 @@ function placeVideo(slotId?: string): void {
 }
 
 // ───────────────────────────── welcome ─────────────────────────────
-// Start downloading + compiling + warming the model as soon as the page opens, while the user
-// reads the welcome screen. Only our own static files are fetched; the camera stays off.
+// The model is downloaded (with a real progress bar), compiled and warmed up as soon as the page
+// opens, while the user reads the welcome screen. Only this site's own static files are fetched;
+// the camera stays off. "Start camera" never waits for the model: the live screens open
+// immediately and a slim banner shows model progress until detection starts.
+const startup = { assetsMs: 0, assetsBytes: 0, engineMs: 0, cameraMs: 0, firstResultMs: 0 };
+const tPage = performance.now();
+let modelReady = false;
+let modelPct = 0;
+let modelError: string | null = null;
+
 tracker = new Tracker(video, { focalNorm, irisMm, targetFps: Number(params.get('fps')) || 24 });
 tracker.onFrame(onTrackerFrame);
-let modelReady = false;
-const trackerReady = tracker
-  .init(params.get('cpu') === '1' ? 'CPU' : 'GPU', params.get('main') === '1' ? 'main' : 'auto')
-  .then((d) => { modelReady = true; return d; });
-trackerReady.catch(() => undefined); // surfaced when the user taps Start
+const trackerReady = preloadModel((f, bytes) => { modelPct = f; startup.assetsBytes = bytes; renderModelStatus(); })
+  .then((assets) => {
+    startup.assetsMs = performance.now() - tPage;
+    modelPct = 1;
+    renderModelStatus();
+    return tracker!.init(assets, params.get('cpu') === '1' ? 'CPU' : 'GPU', params.get('main') === '1' ? 'main' : 'auto');
+  })
+  .then((d) => {
+    startup.engineMs = performance.now() - tPage;
+    modelReady = true;
+    if (cam) tracker!.start();
+    renderModelStatus();
+    return d;
+  })
+  .catch((e) => {
+    modelError = (e as Error)?.message || String(e);
+    renderModelStatus();
+    throw e;
+  });
+trackerReady.catch(() => undefined);
+
+function renderModelStatus(): void {
+  const pct = Math.round(modelPct * 100);
+  const text = modelError
+    ? 'Could not load the face model. Check your connection and reload the page.'
+    : modelReady
+      ? 'On-device model ready ✓'
+      : modelPct < 1 ? `Downloading the on-device model… ${pct}%` : 'Setting up the on-device model…';
+  $('prep-bar').style.width = `${modelReady ? 100 : Math.max(3, pct * 0.9)}%`;
+  $('prep-text').textContent = text;
+  $('prep').classList.toggle('done', modelReady);
+  const banner = $('model-banner');
+  banner.hidden = screen === 'welcome' || (modelReady && !modelError);
+  $('model-banner-text').textContent = modelError ? text : `${text} Face detection starts automatically.`;
+}
 
 $('btn-start').addEventListener('click', async () => {
   const btn = $<HTMLButtonElement>('btn-start');
   const status = $('start-status');
   btn.disabled = true;
-  status.textContent = modelReady ? 'Starting camera…' : 'Starting camera and finishing the on-device model…';
+  status.textContent = 'Starting camera…';
+  const tClick = performance.now();
   try {
-    const [camHandle, delegate] = await Promise.all([openFrontCamera(video), trackerReady]);
-    cam = camHandle;
-    tracker!.start();
-    // The engine already ran a warm-up pass on a blank frame; wait for the first real result.
-    status.textContent = 'Warming up the on-device model…';
-    await new Promise<void>((res) => {
-      const t = setTimeout(res, 15000);
-      const off = tracker!.onFrame(() => { clearTimeout(t); off(); res(); });
-    });
-    status.textContent = `Ready · ${delegate} inference (${tracker!.stats.engine === 'worker' ? 'background thread' : 'main thread'})`;
+    cam = await openFrontCamera(video);
+    startup.cameraMs = performance.now() - tClick;
+    const off = tracker!.onFrame(() => { startup.firstResultMs = performance.now() - tClick; off(); });
+    if (modelReady) tracker!.start(); // otherwise starts as soon as the model is ready
+    status.textContent = '';
     t0 = performance.now();
     startUiLoop();
     show('calibrate');
@@ -122,7 +158,7 @@ $('btn-start').addEventListener('click', async () => {
         unsupported: 'This browser cannot use the camera. Try Chrome on Android or Safari on iOS.',
         other: e.message,
       } as const)[e.kind]
-      : `Could not load the face model: ${(e as Error).message}`;
+      : `Could not start: ${(e as Error).message}`;
     status.textContent = msg;
   }
 });
@@ -647,6 +683,8 @@ if (DEBUG) {
       `luma      ${f?.luma.toFixed(0) ?? '-'}  glare ${f?.glare ?? '-'}  faces ${f?.faces ?? '-'}`,
       `focal     ${(focalNorm() ?? DEFAULT_FOCAL_NORM).toFixed(3)}${focalNorm() ? '' : ' (default)'}`,
       `irisMm    ${(calib.irisMm ?? POPULATION_IRIS_MM).toFixed(2)}  ppmm ${ppmm().toFixed(2)}`,
+      `startup   model ${(startup.assetsBytes / 1e6).toFixed(1)} MB in ${(startup.assetsMs / 1000).toFixed(1)} s · ready ${(startup.engineMs / 1000).toFixed(1)} s`,
+      `          camera ${(startup.cameraMs / 1000).toFixed(1)} s · 1st face ${(startup.firstResultMs / 1000).toFixed(1)} s after tap`,
     ].join('\n');
   }, 250);
 }
@@ -657,6 +695,7 @@ Object.defineProperty(window, '__iriscale', {
     stats: () => ({ ...(tracker?.stats ?? {}), uiFps }),
     latest: () => { const f = tracker?.latest; return f ? { ...f, landmarks: null } : null; },
     screen: () => screen,
+    startup: () => ({ ...startup, modelReady }),
   },
 });
 

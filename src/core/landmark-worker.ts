@@ -5,22 +5,27 @@
  * uses importScripts().
  *
  * Protocol (all buffers transferred, never copied):
- *   → {type:'init', wasm, model, prefer}
+ *   → {type:'init', loaderUrl, wasm: ArrayBuffer, model: ArrayBuffer, prefer}   (preloaded bytes)
  *   ← {type:'ready', delegate} | {type:'error', message}
  *   → {type:'frame', bitmap, ts, out: Float32Array(2*478*3 + 2*16)}   (bitmap is closed here)
  *   ← {type:'result', faces, out, inferMs}                               (out ping-pongs back)
  */
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+import { FaceLandmarker } from '@mediapipe/tasks-vision';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 let lm: FaceLandmarker | null = null;
 let delegate: 'GPU' | 'CPU' = 'CPU';
 const PTS = 478;
 
-async function init(wasm: string, model: string, prefer: 'GPU' | 'CPU'): Promise<void> {
-  const fileset = await FilesetResolver.forVisionTasks(wasm);
+async function init(loaderUrl: string, wasm: ArrayBuffer, model: ArrayBuffer, prefer: 'GPU' | 'CPU'): Promise<void> {
+  // Bytes were already downloaded (with progress) on the main thread: no second fetch.
+  const fileset = {
+    wasmLoaderPath: loaderUrl,
+    wasmBinaryPath: URL.createObjectURL(new Blob([wasm], { type: 'application/wasm' })),
+  };
+  const modelBytes = new Uint8Array(model);
   const make = (d: 'GPU' | 'CPU') => FaceLandmarker.createFromOptions(fileset, {
-    baseOptions: { modelAssetPath: model, delegate: d },
+    baseOptions: { modelAssetBuffer: modelBytes, delegate: d },
     runningMode: 'VIDEO', numFaces: 2,
     minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5,
     outputFaceBlendshapes: false, outputFacialTransformationMatrixes: true,
@@ -38,14 +43,15 @@ ctx.onmessage = async (e: MessageEvent) => {
   const msg = e.data;
   if (msg.type === 'init') {
     try {
-      await init(msg.wasm, msg.model, msg.prefer);
+      await init(msg.loaderUrl, msg.wasm, msg.model, msg.prefer);
       // Warm-up: the first inference compiles GPU shaders / JITs the graph (0.5–3 s on phones).
       // Do it now on a blank frame, before the user has even opened the camera.
       try {
-        const blank = new OffscreenCanvas(640, 480);
+        // Same size as the camera stream so the first live frame doesn't re-allocate textures.
+        const blank = new OffscreenCanvas(1280, 720);
         const bctx = blank.getContext('2d')!;
         bctx.fillStyle = '#808080';
-        bctx.fillRect(0, 0, 640, 480);
+        bctx.fillRect(0, 0, 1280, 720);
         lm!.detectForVideo(blank.transferToImageBitmap(), 1);
       } catch { /* warm-up is best-effort */ }
       ctx.postMessage({ type: 'ready', delegate });

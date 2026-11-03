@@ -1,0 +1,31 @@
+{
+  "label": "worker-cpu-x4-4g",
+  "throttle": 4,
+  "net": "4g",
+  "startup": {
+    "assetsMs": 0,
+    "assetsBytes": 17274508,
+    "engineMs": 0,
+    "cameraMs": 114.80000001192093,
+    "firstResultMs": 0,
+    "modelReady": false
+  },
+  "delegate": "none",
+  "engine": "none",
+  "readyMs": 745,
+  "tapToLiveMs": 302,
+  "detectFps": 0,
+  "inferMsAvg": 0,
+  "inferMsP95": 0,
+  "uiFps": 60.00153030550611,
+  "longTasks": {
+    "count": 0,
+    "maxMs": 0,
+    "perSec": 0
+  },
+  "distanceRangeCm": null,
+  "faceFrames": 0,
+  "flowOk": true,
+  "knownMsg": "Face not detected steadily — try again with better light.",
+  "errors": []
+}

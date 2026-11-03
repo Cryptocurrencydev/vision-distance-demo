@@ -1,0 +1,31 @@
+{
+  "label": "worker-auto-x4-4g",
+  "throttle": 4,
+  "net": "4g",
+  "startup": {
+    "assetsMs": 16109.600000023842,
+    "assetsBytes": 18225250,
+    "engineMs": 0,
+    "cameraMs": 148,
+    "firstResultMs": 0,
+    "modelReady": false
+  },
+  "delegate": "none",
+  "engine": "none",
+  "readyMs": 2598,
+  "tapToLiveMs": 346,
+  "detectFps": 0,
+  "inferMsAvg": 0,
+  "inferMsP95": 0,
+  "uiFps": 58.91649043565124,
+  "longTasks": {
+    "count": 1,
+    "maxMs": 132,
+    "perSec": 0.08333333333333333
+  },
+  "distanceRangeCm": null,
+  "faceFrames": 0,
+  "flowOk": true,
+  "knownMsg": "Face not detected steadily — try again with better light.",
+  "errors": []
+}

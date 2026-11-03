@@ -80,6 +80,15 @@ p { margin: 0 0 12px; }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--accent); }
 .btn.small { min-height: 44px; font-size: .95rem; padding: 8px 14px; }
 .btn.icon { min-width: 56px; min-height: 56px; padding: 0; font-size: 1.5rem; }
+.prep { display: grid; gap: 6px; }
+.prep-track { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+#prep-bar { display: block; height: 100%; width: 3%; background: var(--accent); border-radius: 3px; transition: width .25s ease-out; }
+.prep.done #prep-bar { background: var(--good); }
+.prep.done .hint { color: var(--good); font-weight: 600; }
+.prep .hint { margin: 0; text-align: center; }
+.model-banner { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); max-width: 528px; margin: 0 auto 4px; padding: 10px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: .92rem; font-weight: 600; }
+.spinner { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 2.5px solid var(--accent); border-right-color: transparent; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .disclaimer { font-size: .9rem; color: var(--muted); text-align: center; }
 
 input[type=number] { font: inherit; font-size: 1.4rem; font-variant-numeric: tabular-nums; width: 100%; min-height: 56px; padding: 8px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); margin: 6px 0 12px; }

@@ -2,7 +2,7 @@
 //  - 390×844 mobile viewport (DPR 3, touch), Chrome fake camera fed with test/out/fake-camera.mjpeg
 //  - CPU throttled via CDP (default 4×), measures detection fps / inference ms / UI fps / long tasks
 //  - walks the full flow (skip calibration → guide → E check → results) and saves screenshots
-// Usage: node test/run-perf.mjs [--throttle 4] [--cpu] [--main] [--seconds 15] [--readwait ms] [--url http://...] [--shots]
+// Usage: node test/run-perf.mjs [--throttle 4] [--cpu] [--main] [--net 4g] [--seconds 15] [--readwait ms] [--url http://...] [--shots]
 import { preview } from 'vite';
 import { chromium } from 'playwright';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -16,6 +16,7 @@ const SECONDS = Number(arg('seconds', 15));
 const FORCE_CPU = flag('cpu');
 const MAIN = flag('main');
 const SHOTS = flag('shots');
+const NET = arg('net', '');
 const video = resolve('test/out/fake-camera.mjpeg');
 if (!existsSync(video)) execSync('./test/make-fake-video.sh', { stdio: 'inherit' });
 
@@ -34,7 +35,7 @@ const browser = await chromium.launch({
     '--enable-unsafe-swiftshader',
   ],
 });
-const label = `${MAIN ? 'main' : 'worker'}-${FORCE_CPU ? 'cpu' : 'auto'}-x${THROTTLE}`;
+const label = `${MAIN ? 'main' : 'worker'}-${FORCE_CPU ? 'cpu' : 'auto'}-x${THROTTLE}${NET ? `-${NET}` : ''}`;
 try {
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
@@ -53,16 +54,23 @@ try {
   page.on('pageerror', (e) => errors.push(String(e)));
   const cdp = await ctx.newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: THROTTLE });
+  if (NET === '4g') {
+    // ~typical mobile 4G: 9 Mbps down, 1.5 Mbps up, 150 ms RTT
+    await cdp.send('Network.enable');
+    await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 150, downloadThroughput: 9e6 / 8, uploadThroughput: 1.5e6 / 8 });
+  }
 
   const tLoad = Date.now();
   await page.goto(`${base}/?debug=1${FORCE_CPU ? '&cpu=1' : ''}${MAIN ? '&main=1' : ''}`);
   // Simulate a user reading the welcome screen before tapping Start (the model preloads meanwhile).
+  if (SHOTS) { await page.waitForTimeout(1500); await page.screenshot({ path: 'test/results/screens/0-welcome-loading.png' }); }
   await page.waitForTimeout(Number(arg('readwait', 0)));
   const tClick = Date.now();
   await page.click('#btn-start');
   await page.waitForSelector('#screen-calibrate:not([hidden])', { timeout: 120000 });
   const readyMs = Date.now() - tLoad;
   const tapToLiveMs = Date.now() - tClick;
+  if (SHOTS && await page.isVisible('#model-banner')) await page.screenshot({ path: 'test/results/screens/1a-model-banner.png' });
   mkdirSync('test/results/screens', { recursive: true });
   if (SHOTS) await page.screenshot({ path: 'test/results/screens/1-calibrate.png' });
   // Functional check of option B (known distance), then reset so measurements use defaults.
@@ -112,10 +120,11 @@ try {
     errors.push(`flow: ${e.message}`);
   }
 
-  const steady = samples.slice(3); // skip warm-up
+  const startup = await page.evaluate(() => window.__iriscale.startup());
+  const steady = samples.filter((x) => x.detectFps > 0).slice(3); // skip warm-up / model still loading
   const avg = (k) => steady.reduce((a, s) => a + (s[k] ?? 0), 0) / steady.length;
   const result = {
-    label, throttle: THROTTLE, delegate: samples.at(-1)?.delegate, engine: samples.at(-1)?.engine, readyMs, tapToLiveMs,
+    label, throttle: THROTTLE, net: NET || 'none', startup, delegate: samples.at(-1)?.delegate, engine: samples.at(-1)?.engine, readyMs, tapToLiveMs,
     detectFps: avg('detectFps'), inferMsAvg: avg('inferMsAvg'), inferMsP95: avg('inferMsP95'), uiFps: avg('uiFps'),
     longTasks: { count: longTasks.length, maxMs: Math.max(0, ...longTasks), perSec: longTasks.length / SECONDS },
     distanceRangeCm: dists.length ? [Math.min(...dists), Math.max(...dists)] : null,

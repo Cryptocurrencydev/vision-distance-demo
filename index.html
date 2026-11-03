@@ -22,6 +22,9 @@
         <span>On-device · no video leaves this phone</span>
       </div>
     </header>
+    <div class="model-banner" id="model-banner" role="status" hidden>
+      <span class="spinner" aria-hidden="true"></span><span id="model-banner-text"></span>
+    </div>
 
     <main id="main" tabindex="-1">
       <!-- 0 · Welcome -->
@@ -41,6 +44,10 @@
 
         <div class="actions">
           <button class="btn primary" id="btn-start">Start camera</button>
+          <div class="prep" id="prep">
+            <div class="prep-track" aria-hidden="true"><span id="prep-bar"></span></div>
+            <p class="hint" id="prep-text" aria-live="polite">Preparing the on-device model…</p>
+          </div>
           <p class="hint" id="start-status" role="status" aria-live="polite"></p>
         </div>
         <p class="disclaimer">Demo only. Not a medical device and not a substitute for an eye examination.</p>

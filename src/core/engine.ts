@@ -5,7 +5,8 @@
  *  - MainThreadEngine (engine-main.ts, lazy-loaded fallback): same output shape, for browsers
  *    without OffscreenCanvas/worker support for the wasm loader.
  */
-import { MODEL_PATH, WASM_PATH, type Delegate } from './paths';
+import type { Delegate } from './paths';
+import type { ModelAssets } from './preload';
 
 export const PTS = 478;
 export const OUT_LEN = 2 * PTS * 3 + 2 * 16;
@@ -33,12 +34,11 @@ export class WorkerEngine implements Engine {
     this.worker = new Worker(new URL('./landmark-worker.ts', import.meta.url), { type: 'classic' });
   }
 
-  static async create(prefer: Delegate): Promise<WorkerEngine> {
+  static async create(prefer: Delegate, assets: ModelAssets): Promise<WorkerEngine> {
     if (typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap === 'undefined') {
       throw new Error('worker inference unsupported');
     }
     const eng = new WorkerEngine();
-    const abs = (p: string) => new URL(p, location.href).href;
     await new Promise<void>((resolve, reject) => {
       const t = setTimeout(() => reject(new Error('worker init timeout')), 30000);
       eng.worker.onerror = (e) => { clearTimeout(t); reject(new Error(e.message || 'worker failed')); };
@@ -46,7 +46,8 @@ export class WorkerEngine implements Engine {
         clearTimeout(t);
         if (e.data.type === 'ready') { eng.delegate = e.data.delegate; resolve(); } else reject(new Error(e.data.message));
       };
-      eng.worker.postMessage({ type: 'init', wasm: abs(WASM_PATH), model: abs(MODEL_PATH), prefer });
+      // Copied, not transferred: the main-thread fallback may still need the bytes.
+      eng.worker.postMessage({ type: 'init', loaderUrl: assets.loaderUrl, wasm: assets.wasm, model: assets.model, prefer });
     });
     eng.worker.onmessage = (e) => {
       const cb = eng.pending;
