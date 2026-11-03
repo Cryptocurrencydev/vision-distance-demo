@@ -1,0 +1,24 @@
+{
+  "label": "main-cpu-x4",
+  "throttle": 4,
+  "delegate": "CPU",
+  "engine": "main",
+  "readyMs": 1352,
+  "detectFps": 10.957333955247053,
+  "inferMsAvg": 74.02930555211174,
+  "inferMsP95": 76.258333320419,
+  "uiFps": 21.706017093524906,
+  "longTasks": {
+    "count": 175,
+    "maxMs": 89,
+    "perSec": 11.666666666666666
+  },
+  "distanceRangeCm": [
+    33.27780236976546,
+    47.67636920585564
+  ],
+  "faceFrames": 15,
+  "flowOk": true,
+  "knownMsg": "Saved. This camera's focal length is +20% vs. the typical-phone default.",
+  "errors": []
+}

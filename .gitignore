@@ -1,0 +1,9 @@
+node_modules
+dist
+.vercel
+.env*
+test/results/*.y4m
+test/out
+*.log
+.DS_Store
+public/mediapipe/

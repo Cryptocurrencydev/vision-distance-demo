@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Iriscale accuracy harness</title>
+    <style>body{font:14px system-ui;margin:16px} canvas{max-width:240px;border:1px solid #ccc;margin:4px} pre{white-space:pre-wrap}</style>
+  </head>
+  <body>
+    <h1>Accuracy harness</h1>
+    <p>Run <code>npm run test:accuracy</code>. This page renders synthetic frames of a face at known distances and measures them with the production distance code.</p>
+    <div id="thumbs"></div>
+    <pre id="out"></pre>
+    <script type="module" src="./accuracy.ts"></script>
+  </body>
+</html>

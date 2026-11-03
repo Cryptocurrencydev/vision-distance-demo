@@ -1,0 +1,26 @@
+{
+  "name": "vision-distance-demo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test:accuracy": "node test/run-accuracy.mjs",
+    "test:perf": "node test/run-perf.mjs --throttle 4 --cpu --shots && node test/run-perf.mjs --throttle 4 && node test/run-perf.mjs --throttle 4 --cpu --main && node test/run-perf.mjs --throttle 4 --main && node test/run-perf.mjs --throttle 1 --cpu && node test/perf-report.mjs",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/copy-mediapipe.mjs",
+    "predev": "node scripts/copy-mediapipe.mjs",
+    "prebuild": "node scripts/copy-mediapipe.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "playwright": "^1.64.1",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.5"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.2.0"
+  }
+}

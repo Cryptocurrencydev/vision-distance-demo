@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f6f8f9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1416" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Iriscale — on-device face-to-phone distance measurement and near-vision check demo. No video leaves your phone." />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Iriscale · Near Vision Demo</title>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="topbar">
+      <div class="brand" aria-label="Iriscale">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="16" cy="16" r="6.5" fill="currentColor"/><path d="M2 16h5M25 16h5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span>Iriscale</span>
+      </div>
+      <div class="privacy-pill" role="note">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>On-device · no video leaves this phone</span>
+      </div>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <!-- 0 · Welcome -->
+      <section class="screen" id="screen-welcome" data-screen="welcome" aria-labelledby="h-welcome">
+        <p class="eyebrow">Near-vision check · Demo</p>
+        <h1 id="h-welcome">Measure your reading distance with the front camera.</h1>
+        <p class="lead">Iriscale finds your eyes, measures your iris in pixels and turns it into a live face-to-phone distance, then runs a short tumbling-E check at that exact distance.</p>
+
+        <div class="card privacy">
+          <h2>Your privacy</h2>
+          <ul class="checks">
+            <li><strong>Everything runs on this phone.</strong> Face detection uses a model bundled with this page.</li>
+            <li><strong>No video or images are uploaded, recorded or stored.</strong> The page's security policy blocks it from sending data to any other server.</li>
+            <li>Only calibration numbers (e.g. a focal length) are saved, in this browser only.</li>
+          </ul>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btn-start">Start camera</button>
+          <p class="hint" id="start-status" role="status" aria-live="polite"></p>
+        </div>
+        <p class="disclaimer">Demo only. Not a medical device and not a substitute for an eye examination.</p>
+      </section>
+
+      <!-- 1 · Calibrate -->
+      <section class="screen" id="screen-calibrate" data-screen="calibrate" aria-labelledby="h-cal" hidden>
+        <p class="eyebrow">Step 1 of 4 · Calibration <span class="muted">(optional)</span></p>
+        <h1 id="h-cal">Calibrate once for better accuracy.</h1>
+        <p class="lead">Each step is optional and saved on this device. Without calibration, Iriscale uses typical phone and eye measurements.</p>
+
+        <div class="cal-status" id="cal-status" aria-live="polite"></div>
+
+        <div class="tabs" role="tablist" aria-label="Calibration type">
+          <button role="tab" id="tab-screen" aria-controls="panel-screen" aria-selected="true">Screen</button>
+          <button role="tab" id="tab-card" aria-controls="panel-card" aria-selected="false" tabindex="-1">Card at face</button>
+          <button role="tab" id="tab-known" aria-controls="panel-known" aria-selected="false" tabindex="-1">Known distance</button>
+        </div>
+
+        <div class="panel" role="tabpanel" id="panel-screen" aria-labelledby="tab-screen">
+          <p>Lay a bank card <strong>upright</strong> on the screen, top-left corner in the outline's corner, and resize the outline until it matches the card exactly. This makes on-screen letters physically accurate.</p>
+          <div class="card-stage"><div class="card-outline" id="card-outline"><span>54 × 85.6 mm</span></div></div>
+          <label class="range-label" for="card-range">Outline size</label>
+          <div class="stepper">
+            <button class="btn icon" id="card-minus" aria-label="Make outline smaller">−</button>
+            <input type="range" id="card-range" min="200" max="900" step="1" />
+            <button class="btn icon" id="card-plus" aria-label="Make outline larger">+</button>
+          </div>
+          <button class="btn" id="btn-save-screen">Save screen size</button>
+        </div>
+
+        <div class="panel" role="tabpanel" id="panel-card" aria-labelledby="tab-card" hidden>
+          <p>Hold the phone at arm's length. Hold a bank card <strong>flat against your cheek, beside your eye</strong>, long edge horizontal, then tap <em>Capture</em>. Drag the two lines to the card's left and right edges.</p>
+          <p class="hint">This measures <em>your</em> iris size (people vary by about ±4%). The frame stays on this phone and is discarded after.</p>
+          <div class="capture-wrap" id="capture-wrap">
+            <div class="video-slot" id="slot-card"></div>
+            <canvas id="capture-canvas" hidden aria-label="Captured frame for card measurement"></canvas>
+            <div class="edge" id="edge-l" tabindex="0" role="slider" aria-label="Card left edge" hidden></div>
+            <div class="edge" id="edge-r" tabindex="0" role="slider" aria-label="Card right edge" hidden></div>
+          </div>
+          <div class="row">
+            <button class="btn" id="btn-capture">Capture</button>
+            <button class="btn primary" id="btn-save-card" disabled>Use this card</button>
+          </div>
+          <p class="hint" id="card-msg" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="panel" role="tabpanel" id="panel-known" aria-labelledby="tab-known" hidden>
+          <p>Measure a distance from the phone's camera to your eyes with a ruler or tape, hold still, then tap <em>Calibrate</em>. This sets the focal length for this phone's camera.</p>
+          <div class="video-slot small" id="slot-known"></div>
+          <label for="known-cm">Distance from camera to eyes (cm)</label>
+          <input id="known-cm" type="number" inputmode="decimal" min="20" max="100" step="0.5" value="40" />
+          <button class="btn" id="btn-known">Calibrate</button>
+          <p class="hint" id="known-msg" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="btn-cal-next">Continue</button>
+          <button class="btn ghost" id="btn-cal-skip">Skip calibration</button>
+          <button class="btn ghost small" id="btn-cal-reset">Reset saved calibration</button>
+        </div>
+      </section>
+
+      <!-- 2 · Distance guide -->
+      <section class="screen" id="screen-guide" data-screen="guide" aria-labelledby="h-guide" hidden>
+        <p class="eyebrow">Step 2 of 4 · Distance</p>
+        <h1 id="h-guide">Hold the phone at <span class="nowrap">40 cm</span>.</h1>
+        <div class="gauge">
+          <div class="ring-wrap">
+            <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+              <circle class="ring-track" cx="120" cy="120" r="112" />
+              <circle class="ring-zone" id="ring-zone" cx="120" cy="120" r="112" />
+            </svg>
+            <div class="video-slot round" id="slot-guide"></div>
+            <svg class="overlay" id="overlay-guide" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+          </div>
+          <div class="readout">
+            <div class="distance" aria-hidden="true"><span id="dist-num">--</span><span class="unit">cm</span></div>
+            <div class="zone-label" id="zone-label">Looking for your face…</div>
+            <div class="conf" id="conf"><span class="dot"></span><span id="conf-text">Confidence —</span></div>
+          </div>
+          <div class="ruler" aria-hidden="true">
+            <div class="ruler-zone"></div>
+            <div class="ruler-marker" id="ruler-marker"></div>
+            <div class="ruler-ticks"><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span></div>
+          </div>
+        </div>
+        <ul class="warnings" id="warnings-guide" aria-live="polite"></ul>
+        <p class="sr-only" id="guide-live" aria-live="polite"></p>
+        <div class="actions sticky">
+          <button class="btn primary" id="btn-guide-next" disabled>Hold steady…</button>
+        </div>
+      </section>
+
+      <!-- 3 · Tumbling E check -->
+      <section class="screen" id="screen-check" data-screen="check" aria-labelledby="h-check" hidden>
+        <div class="check-head">
+          <p class="eyebrow" id="h-check">Step 3 of 4 · Near vision</p>
+          <div class="mini" aria-live="off"><span id="check-dist">--</span> cm <span class="dot" id="check-dot"></span></div>
+        </div>
+        <p class="instruction">Which way do the arms of the <strong>E</strong> point? Swipe that way, or use the arrows.</p>
+        <div class="optotype-stage" id="optotype-stage" tabindex="0" aria-describedby="check-progress">
+          <canvas id="optotype" role="img" aria-label="Letter E"></canvas>
+          <div class="paused" id="check-paused" hidden><p id="check-paused-msg">Move to about 40 cm</p></div>
+          <div class="video-slot pip" id="slot-check"></div>
+        </div>
+        <p class="progress" id="check-progress" aria-live="polite"></p>
+        <div class="dpad" role="group" aria-label="Answer direction">
+          <button class="btn icon" data-dir="up" aria-label="Up">↑</button>
+          <button class="btn icon" data-dir="left" aria-label="Left">←</button>
+          <button class="btn icon" data-dir="right" aria-label="Right">→</button>
+          <button class="btn icon" data-dir="down" aria-label="Down">↓</button>
+        </div>
+        <div class="actions">
+          <button class="btn ghost small" id="btn-check-unsure">Can't tell</button>
+          <button class="btn ghost small" id="btn-check-end">End check</button>
+        </div>
+      </section>
+
+      <!-- 4 · Results -->
+      <section class="screen" id="screen-results" data-screen="results" aria-labelledby="h-results" hidden>
+        <p class="eyebrow">Step 4 of 4 · Results</p>
+        <h1 id="h-results">Session summary</h1>
+        <div class="result-hero" id="result-hero"></div>
+        <div class="metrics" id="metrics"></div>
+        <div class="card">
+          <h2>Distance during the check</h2>
+          <svg class="spark" id="spark" viewBox="0 0 320 90" preserveAspectRatio="none" role="img" aria-label="Distance over time"></svg>
+        </div>
+        <details class="card log">
+          <summary><h2>Measurement log</h2></summary>
+          <div class="table-wrap"><table id="log-table"><thead><tr><th>t (s)</th><th>Phase</th><th>Distance</th><th>Conf.</th><th>Iris px</th><th>Light</th><th>Centred</th></tr></thead><tbody></tbody></table></div>
+          <button class="btn small" id="btn-csv">Download CSV (saved on this device)</button>
+        </details>
+        <div class="card disclaimer-box" role="note">
+          <h2>Demo only — not a medical device</h2>
+          <p>This demonstration has not been clinically validated and must not be used for diagnosis or to make decisions about your eyesight. See an optometrist or ophthalmologist for an eye examination.</p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btn-again">Run again</button>
+          <button class="btn ghost" id="btn-recal">Recalibrate</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Iriscale is a fictional brand.</span>
+      <span>Demo by DC Tech</span>
+    </footer>
+
+    <div class="debug" id="debug" hidden aria-hidden="true"></div>
+    <video id="cam" playsinline muted autoplay aria-hidden="true"></video>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

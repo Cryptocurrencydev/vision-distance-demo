@@ -1,0 +1,24 @@
+{
+  "label": "main-auto-x4",
+  "throttle": 4,
+  "delegate": "GPU",
+  "engine": "main",
+  "readyMs": 6263,
+  "detectFps": 12.960129505749933,
+  "inferMsAvg": 67.46416666689845,
+  "inferMsP95": 70.96666666865349,
+  "uiFps": 17.34790036683245,
+  "longTasks": {
+    "count": 200,
+    "maxMs": 83,
+    "perSec": 13.333333333333334
+  },
+  "distanceRangeCm": [
+    33.33722189316146,
+    47.190805778944515
+  ],
+  "faceFrames": 15,
+  "flowOk": true,
+  "knownMsg": "Saved. This camera's focal length is -1% vs. the typical-phone default (measurement was a bit shaky — repeat for best accuracy).",
+  "errors": []
+}
