@@ -39,6 +39,15 @@ ctx.onmessage = async (e: MessageEvent) => {
   if (msg.type === 'init') {
     try {
       await init(msg.wasm, msg.model, msg.prefer);
+      // Warm-up: the first inference compiles GPU shaders / JITs the graph (0.5–3 s on phones).
+      // Do it now on a blank frame, before the user has even opened the camera.
+      try {
+        const blank = new OffscreenCanvas(640, 480);
+        const bctx = blank.getContext('2d')!;
+        bctx.fillStyle = '#808080';
+        bctx.fillRect(0, 0, 640, 480);
+        lm!.detectForVideo(blank.transferToImageBitmap(), 1);
+      } catch { /* warm-up is best-effort */ }
       ctx.postMessage({ type: 'ready', delegate });
     } catch (err) {
       ctx.postMessage({ type: 'error', message: String((err as Error)?.message ?? err) });

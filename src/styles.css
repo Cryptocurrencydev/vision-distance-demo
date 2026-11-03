@@ -183,6 +183,7 @@ th:nth-child(2), td:nth-child(2) { text-align: left; }
 .disclaimer-box { border-color: var(--warn); background: var(--warn-soft); }
 .disclaimer-box h2 { color: var(--warn); }
 
+.footer a { color: var(--accent); font-weight: 600; text-underline-offset: 3px; }
 .footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; max-width: 560px; width: 100%; margin: 0 auto; padding: 16px; font-size: .85rem; color: var(--muted); border-top: 1px solid var(--line); }
 
 .debug { position: fixed; left: 8px; top: calc(8px + env(safe-area-inset-top)); z-index: 40; background: rgb(0 0 0 / 78%); color: #b6ffcf; font: 12px/1.35 ui-monospace, Menlo, monospace; padding: 8px 10px; border-radius: 8px; pointer-events: none; white-space: pre; }

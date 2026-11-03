@@ -10,6 +10,11 @@ export class MainThreadEngine implements Engine {
 
   static async create(prefer: Delegate): Promise<MainThreadEngine> {
     const { landmarker, delegate } = await createLandmarker('VIDEO', prefer);
+    try { // warm-up pass on a blank frame (shader compile / graph JIT)
+      const blank = document.createElement('canvas');
+      blank.width = 640; blank.height = 480;
+      landmarker.detectForVideo(blank, 1);
+    } catch { /* best-effort */ }
     return new MainThreadEngine(landmarker, delegate);
   }
 

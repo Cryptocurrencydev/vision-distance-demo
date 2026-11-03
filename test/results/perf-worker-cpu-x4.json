@@ -3,22 +3,23 @@
   "throttle": 4,
   "delegate": "CPU",
   "engine": "worker",
-  "readyMs": 1002,
-  "detectFps": 22.36555793663035,
-  "inferMsAvg": 15.531388889584273,
-  "inferMsP95": 15.950000007947287,
-  "uiFps": 59.75245925829301,
+  "readyMs": 3441,
+  "tapToLiveMs": 305,
+  "detectFps": 22.27962287327196,
+  "inferMsAvg": 15.935555555671455,
+  "inferMsP95": 16.88333334028721,
+  "uiFps": 59.75618950700875,
   "longTasks": {
     "count": 0,
     "maxMs": 0,
     "perSec": 0
   },
   "distanceRangeCm": [
-    33.29938144508654,
-    47.66395973592944
+    33.14131080819586,
+    47.721022318528654
   ],
   "faceFrames": 15,
   "flowOk": true,
-  "knownMsg": "Saved. This camera's focal length is +17% vs. the typical-phone default (measurement was a bit shaky — repeat for best accuracy).",
+  "knownMsg": "Saved. This camera's focal length is +8% vs. the typical-phone default (measurement was a bit shaky — repeat for best accuracy).",
   "errors": []
 }

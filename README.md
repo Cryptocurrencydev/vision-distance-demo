@@ -50,7 +50,7 @@ test/                     accuracy + perf harnesses (Playwright), fixtures, resu
 
 **Inference off the main thread.** Each tick does a cheap `createImageBitmap(video)`, which is **transferred** (zero-copy) to the worker. The worker runs `detectForVideo` and writes landmarks and transform matrices into one `Float32Array` that **ping-pongs** between threads, so there's no per-frame allocation. The main thread unpacks it into a fixed array of 478 reused point objects. Luminance and glare sampling use 32×24 and 64×16 scratch canvases allocated once, every 3rd inference. If `OffscreenCanvas`/worker inference isn't available, a lazy-loaded main-thread engine takes over. If the GPU delegate fails at runtime (some Android drivers), it falls back to CPU.
 
-**Lifecycle.** The loop and the video pause on `visibilitychange` (hidden tab), and the filter resets on resume. The start screen waits for the first real inference ("warming up", 0.5–3 s for shader compile / wasm JIT), so the user never lands on a dead live view.
+**Lifecycle.** The loop and the video pause on `visibilitychange` (hidden tab), and the filter resets on resume. The model starts downloading, compiling and running a **warm-up inference on a blank frame** (GPU shader compile / graph JIT) as soon as the page opens, in parallel with the user reading the welcome screen. *Start camera* then only has to open the camera, and the screen waits for the first real result so the user never lands on a dead live view.
 
 ## The iris method
 
@@ -120,6 +120,7 @@ The synthetic test doesn't model lens distortion, autofocus breathing, motion bl
 - Moving inference to a worker took the UI from **~17–22 fps to 60 fps** at 4× throttle, with zero long tasks.
 - Caveats: headless Chromium has no real GPU (the GPU delegate is software-emulated and slower than CPU here), and CDP throttling doesn't slow worker threads. The **main-thread 4× inference time (~45–75 ms) is the better proxy** for a mid-range Android phone. Expect ~13–20 fps detection there, with the UI unaffected.
 - Payload: app JS **33 kB** (13 kB gzip) + CSS 12 kB. Measured on the live site, the one-time downloads are the MediaPipe wasm (14.5 MB raw, **3.9 MB** compressed) and the face model (**3.3 MB** transferred), both cached for 7 days. A cold start on the live site (download + model warm-up, headless test machine in Lagos → Vercel fra1) took ~24 s. On a fast connection with a real GPU expect ~3–8 s, and repeat visits skip the download.
+- **Warm-up:** time from tapping *Start camera* to the live screen (user spends 4 s on the welcome screen first, same machine, no network): **5.9 s → 1.3 s** after moving model download, compile and the warm-up inference to page load.
 - Live check: the full flow (calibrate → guide → E check → results) passes on the production URL with the strict CSP active (worker + wasm load fine): 22.5 fps detection, 60 fps UI, 0 long tasks at 4× throttle.
 
 ## Privacy approach
@@ -169,4 +170,4 @@ Vite + TypeScript, no UI framework, no runtime dependencies other than `@mediapi
 
 ---
 
-Demo by DC Tech
+Demo by [DC Tech](https://dctechltd.com)

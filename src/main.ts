@@ -79,24 +79,32 @@ function placeVideo(slotId?: string): void {
 }
 
 // ───────────────────────────── welcome ─────────────────────────────
+// Start downloading + compiling + warming the model as soon as the page opens, while the user
+// reads the welcome screen. Only our own static files are fetched; the camera stays off.
+tracker = new Tracker(video, { focalNorm, irisMm, targetFps: Number(params.get('fps')) || 24 });
+tracker.onFrame(onTrackerFrame);
+let modelReady = false;
+const trackerReady = tracker
+  .init(params.get('cpu') === '1' ? 'CPU' : 'GPU', params.get('main') === '1' ? 'main' : 'auto')
+  .then((d) => { modelReady = true; return d; });
+trackerReady.catch(() => undefined); // surfaced when the user taps Start
+
 $('btn-start').addEventListener('click', async () => {
   const btn = $<HTMLButtonElement>('btn-start');
   const status = $('start-status');
   btn.disabled = true;
-  status.textContent = 'Starting camera and loading the on-device model…';
+  status.textContent = modelReady ? 'Starting camera…' : 'Starting camera and finishing the on-device model…';
   try {
-    cam = await openFrontCamera(video);
-    tracker = new Tracker(video, { focalNorm, irisMm, targetFps: Number(params.get('fps')) || 24 });
-    tracker.onFrame(onTrackerFrame);
-    const delegate = await tracker.init(params.get('cpu') === '1' ? 'CPU' : 'GPU', params.get('main') === '1' ? 'main' : 'auto');
-    tracker.start();
-    // First inference compiles GPU shaders / JITs wasm (0.5–3 s); don't show a live screen before it.
+    const [camHandle, delegate] = await Promise.all([openFrontCamera(video), trackerReady]);
+    cam = camHandle;
+    tracker!.start();
+    // The engine already ran a warm-up pass on a blank frame; wait for the first real result.
     status.textContent = 'Warming up the on-device model…';
     await new Promise<void>((res) => {
       const t = setTimeout(res, 15000);
       const off = tracker!.onFrame(() => { clearTimeout(t); off(); res(); });
     });
-    status.textContent = `Ready · ${delegate} inference (${tracker.stats.engine === 'worker' ? 'background thread' : 'main thread'})`;
+    status.textContent = `Ready · ${delegate} inference (${tracker!.stats.engine === 'worker' ? 'background thread' : 'main thread'})`;
     t0 = performance.now();
     startUiLoop();
     show('calibrate');

@@ -2,7 +2,7 @@
 //  - 390×844 mobile viewport (DPR 3, touch), Chrome fake camera fed with test/out/fake-camera.mjpeg
 //  - CPU throttled via CDP (default 4×), measures detection fps / inference ms / UI fps / long tasks
 //  - walks the full flow (skip calibration → guide → E check → results) and saves screenshots
-// Usage: node test/run-perf.mjs [--throttle 4] [--cpu] [--main] [--seconds 15] [--url http://...] [--shots]
+// Usage: node test/run-perf.mjs [--throttle 4] [--cpu] [--main] [--seconds 15] [--readwait ms] [--url http://...] [--shots]
 import { preview } from 'vite';
 import { chromium } from 'playwright';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -56,9 +56,13 @@ try {
 
   const tLoad = Date.now();
   await page.goto(`${base}/?debug=1${FORCE_CPU ? '&cpu=1' : ''}${MAIN ? '&main=1' : ''}`);
+  // Simulate a user reading the welcome screen before tapping Start (the model preloads meanwhile).
+  await page.waitForTimeout(Number(arg('readwait', 0)));
+  const tClick = Date.now();
   await page.click('#btn-start');
   await page.waitForSelector('#screen-calibrate:not([hidden])', { timeout: 120000 });
   const readyMs = Date.now() - tLoad;
+  const tapToLiveMs = Date.now() - tClick;
   mkdirSync('test/results/screens', { recursive: true });
   if (SHOTS) await page.screenshot({ path: 'test/results/screens/1-calibrate.png' });
   // Functional check of option B (known distance), then reset so measurements use defaults.
@@ -111,7 +115,7 @@ try {
   const steady = samples.slice(3); // skip warm-up
   const avg = (k) => steady.reduce((a, s) => a + (s[k] ?? 0), 0) / steady.length;
   const result = {
-    label, throttle: THROTTLE, delegate: samples.at(-1)?.delegate, engine: samples.at(-1)?.engine, readyMs,
+    label, throttle: THROTTLE, delegate: samples.at(-1)?.delegate, engine: samples.at(-1)?.engine, readyMs, tapToLiveMs,
     detectFps: avg('detectFps'), inferMsAvg: avg('inferMsAvg'), inferMsP95: avg('inferMsP95'), uiFps: avg('uiFps'),
     longTasks: { count: longTasks.length, maxMs: Math.max(0, ...longTasks), perSec: longTasks.length / SECONDS },
     distanceRangeCm: dists.length ? [Math.min(...dists), Math.max(...dists)] : null,
